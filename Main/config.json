@@ -1,27 +1,31 @@
 {
-    "files": {
-        "Packing List 33kV Single Manual": {
-            "path": "Templates/PACKING_LIST_Disc_33kV_Manual_Single_ES_Manual.xlsx",
-            "mappings": {
-                "B3": "C3",
-                "B4": "C4",
-                "B5": "C5",
-                "B6": "C6",
-                "B7": "C7",
-                "B8": "C8"
-
-            }
-        },
-        "Packing List 72.5kV Dual Manual": {
-            "path": "Templates/PACKING_LIST_Disc_72.5kV_Motor_Dual_ES_Motor.xlsx",
-            "mappings": {
-                "B3": "C3",
-                "B4": "C4",
-                "B5": "C5",
-                "B6": "C6",
-                "B7": "C7",
-                "B8": "C8"
-            }
+  "files": {
+    "Packing Lists": {
+      "Packing List 33kV Single Manual": {
+        "path": "/Users/ronitbhandari/Desktop/template_creator/Main/Templates/PACKING_LIST_Disc_33kV_Manual_Single_ES_Manual.xlsx",
+        "mappings": {
+          "B3": "C3",
+          "B4": "C4",
+          "B5": "C5",
+          "B6": "C6",
+          "B7": "C7",
+          "B8": "C8"
         }
+      },
+      "Packing List 72.5kV Dual Manual": {
+        "path": "/Users/ronitbhandari/Desktop/template_creator/Main/Templates/PACKING_LIST_Disc_72.5kV_Motor_Dual_ES_Motor.xlsx",
+        "mappings": {
+          "B3": "C3",
+          "B4": "C4",
+          "B5": "C5",
+          "B6": "C6",
+          "B7": "C7",
+          "B8": "C8"
+        }
+      }
     }
+  },
+  "serial_numbers": {
+    "100": 5
+  }
 }

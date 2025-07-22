@@ -1,4 +1,5 @@
 """
+file name: gui.py
 Template Editor GUI - A user-friendly interface for the Template Editor
 """
 
@@ -18,7 +19,7 @@ from pathlib import Path
 # Add the parent directory to Python path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from Main.template_editor import load_config, create_template, save_modified_template, load_workbook
+from template_editor import get_base_path, load_config, process_template_generation, load_workbook
 
 class TemplateEditorApp:
     def __init__(self, root):
@@ -32,7 +33,8 @@ class TemplateEditorApp:
         self.entries = {}
         
         # Set config path
-        self.config_path = os.path.join(Path(__file__).parent, 'config.json')
+        # Config file is in the Main/ directory, a subdirectory of the project root.
+        self.config_path = os.path.join(str(Path(__file__).parent), 'config.json')
         
         # Load configuration
         self.load_configuration()
@@ -58,6 +60,20 @@ class TemplateEditorApp:
         main_frame = ttk.Frame(self.root, padding="10")
         main_frame.pack(fill=tk.BOTH, expand=True)
         
+        # Category selection
+        ttk.Label(main_frame, text="Select Category:", font=('Arial', 10, 'bold')).pack(anchor='w')
+        
+        self.category_var = tk.StringVar()
+        self.category_combo = ttk.Combobox(
+            main_frame,
+            textvariable=self.category_var,
+            values=list(self.config['files'].keys()) if self.config else [],
+            state='readonly',
+            font=('Arial', 10)
+        )
+        self.category_combo.pack(fill=tk.X, pady=(0, 10))
+        self.category_combo.bind('<<ComboboxSelected>>', self.on_category_selected)
+
         # Template selection
         ttk.Label(main_frame, text="Select Template:", font=('Arial', 10, 'bold')).pack(anchor='w')
         
@@ -65,8 +81,8 @@ class TemplateEditorApp:
         self.template_combo = ttk.Combobox(
             main_frame,
             textvariable=self.template_var,
-            values=list(self.config['files'].keys()) if self.config else [],
-            state='readonly',
+            values=[],
+            state='disabled',
             font=('Arial', 10)
         )
         self.template_combo.pack(fill=tk.X, pady=(0, 10))
@@ -116,15 +132,25 @@ class TemplateEditorApp:
             width=10
         ).pack(side=tk.LEFT, padx=(5, 0))
         
+        # Right side of the button frame (quantity and generate button)
+        right_button_frame = ttk.Frame(button_frame)
+        right_button_frame.pack(side=tk.RIGHT)
+
+        # Quantity Entry
+        ttk.Label(right_button_frame, text="Quantity:").pack(side=tk.LEFT)
+        self.quantity_var = tk.StringVar(value="1")
+        self.quantity_entry = ttk.Entry(right_button_frame, textvariable=self.quantity_var, width=5)
+        self.quantity_entry.pack(side=tk.LEFT, padx=(0, 10))
+
         # Generate button
         self.generate_btn = ttk.Button(
-            button_frame,
+            right_button_frame,
             text="Generate Document",
             command=self.generate_document,
             state=tk.DISABLED,
             width=20
         )
-        self.generate_btn.pack(side=tk.RIGHT)
+        self.generate_btn.pack(side=tk.LEFT)
         
         # Status bar
         self.status_var = tk.StringVar()
@@ -138,6 +164,26 @@ class TemplateEditorApp:
         self.status_bar.pack(side=tk.BOTTOM, fill=tk.X)
         self.update_status("Select a template to begin")
     
+    def on_category_selected(self, event=None):
+        """When a category is selected, populate the templates combobox."""
+        # Clear previous template selection and inputs
+        self.template_var.set('')
+        for widget in self.scrollable_frame.winfo_children():
+            widget.destroy()
+        self.entries.clear()
+        self.generate_btn.config(state=tk.DISABLED)
+        self.template_combo.config(values=[], state='disabled')
+
+        # Get selected category
+        category_name = self.category_var.get()
+        if not category_name or not self.config or 'files' not in self.config:
+            return
+
+        # Populate templates
+        templates = list(self.config['files'].get(category_name, {}).keys())
+        self.template_combo.config(values=templates, state='readonly' if templates else 'disabled')
+        self.update_status(f"Selected category: {category_name}")
+
     def on_template_selected(self, event=None):
         """When a template is selected, load its fields"""
         # Clear previous inputs
@@ -145,18 +191,19 @@ class TemplateEditorApp:
             widget.destroy()
         self.entries.clear()
         
-        # Get selected template
+        # Get selected category and template
+        category_name = self.category_var.get()
         template_name = self.template_var.get()
-        if not template_name or not self.config or 'files' not in self.config:
+        if not category_name or not template_name or not self.config or 'files' not in self.config:
             return
         
-        template_config = self.config['files'].get(template_name)
+        template_config = self.config['files'].get(category_name, {}).get(template_name)
         if not template_config:
             return
         
         # Create input fields
         try:
-            excel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), template_config['path'])
+            excel_path = template_config['path']
             if not os.path.exists(excel_path):
                 messagebox.showerror("Error", f"Template file not found: {excel_path}")
                 self.update_status("Error: Template file not found")
@@ -203,43 +250,64 @@ class TemplateEditorApp:
             return cell_ref  # Return the cell reference if can't read the cell
     
     def generate_document(self):
-        """Generate the document with user input"""
+        """Generate the document(s) with the user's input"""
+        # Get template info
+        category_name = self.category_var.get()
         template_name = self.template_var.get()
-        if not template_name or not self.config or 'files' not in self.config:
+        
+        if not category_name or not template_name:
+            messagebox.showerror("Error", "Please select a category and a template.")
+            return
+
+        # Get user inputs
+        results = {key: entry.get() for key, entry in self.entries.items()}
+        
+        # Get and validate quantity
+        try:
+            quantity = int(self.quantity_var.get())
+            if quantity < 1:
+                raise ValueError
+        except (ValueError, TypeError):
+            messagebox.showerror("Error", "Please enter a valid quantity (a positive number).")
             return
             
-        template_config = self.config['files'].get(template_name)
-        if not template_config:
-            return
-            
-        # Check if save location is specified
+        # Get save path
         save_path = self.save_path_var.get()
         if not save_path:
-            messagebox.showwarning("Warning", "Please select a save location first.")
+            messagebox.showerror("Error", "Please select a save location first.")
             return
-            
-        excel_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), template_config['path'])
         
-        # Collect user inputs
-        results = {}
-        for coord, entry in self.entries.items():
-            results[coord] = entry.get()
-        
-        # Save the modified template
         try:
-            # Use the user-specified path
-            saved_path = save_modified_template(excel_path, results, template_name, output_path=save_path)
-            if saved_path:
-                messagebox.showinfo("Success", f"Document saved to:\n{saved_path}")
-                self.update_status(f"Document saved: {os.path.basename(saved_path)}")
-                # Clear form
-                for entry in self.entries.values():
-                    entry.delete(0, tk.END)
-                self.template_var.set('')
-                self.generate_btn.config(state=tk.DISABLED)
-            else:
-                messagebox.showerror("Error", "Failed to save document")
-                self.update_status("Error saving document")
+            self.update_status("Generating documents...")
+            self.root.update_idletasks() # Force UI update
+
+            # Process the template generation
+            generated_files = process_template_generation(
+                self.config,
+                self.config_path,
+                category_name,
+                template_name,
+                results,
+                quantity,
+                os.path.dirname(save_path) # Pass the directory
+            )
+            
+            success_message = f"Successfully generated {len(generated_files)} document(s)."
+            if len(generated_files) < 11:
+                success_message += "\n\n" + "\n".join([os.path.basename(f) for f in generated_files])
+
+            self.update_status(success_message)
+            messagebox.showinfo("Success", success_message)
+
+            # Reset UI after success
+            self.category_var.set('')
+            self.template_var.set('')
+            self.template_combo.config(values=[], state='disabled')
+            for widget in self.scrollable_frame.winfo_children():
+                widget.destroy()
+            self.entries.clear()
+            self.generate_btn.config(state=tk.DISABLED)
+            self.quantity_var.set('1')
                 
         except Exception as e:
             messagebox.showerror("Error", f"Failed to generate document: {str(e)}")

@@ -22,6 +22,9 @@ if errorlevel 1 (
     python -m ensurepip --upgrade
 )
 
+:: Upgrade pip to latest version
+python -m pip install --upgrade pip
+
 :: Install required modules
 python -m pip install -r requirements.txt
 
