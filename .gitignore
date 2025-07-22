@@ -189,6 +189,10 @@ cython_debug/
 # .vscode/
 
 # Ruff stuff:
+
+# Excel temporary files
+~*.xlsx
+~*.xls
 .ruff_cache/
 
 # PyPI configuration file
