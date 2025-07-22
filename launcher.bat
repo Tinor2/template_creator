@@ -4,18 +4,15 @@ setlocal
 :: Check if Python is installed
 python --version >nul 2>&1
 if errorlevel 1 (
-    echo Python not found. Installing Python...
+    echo Python not found. Opening Microsoft Store for installation...
     
-    :: Download and install Python
-    powershell -Command "Invoke-WebRequest -Uri 'https://www.python.org/ftp/python/3.11.0/python-3.11.0-amd64.exe' -OutFile 'python_installer.exe'"
+    :: Open Microsoft Store for Python
+    start ms-windows-store://pdp/?productid=9NJ46SX7X90P
     
-    :: Run Python installer
-    start /wait python_installer.exe /quiet /passive
-    
-    :: Clean up
-    del python_installer.exe
-    
-    echo Python installation complete
+    echo Please install Python from the Microsoft Store and run this launcher again.
+    echo Installation will continue once you have installed Python.
+    pause
+    exit /b 1
 )
 
 :: Check if pip is installed
